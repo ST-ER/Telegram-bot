@@ -4,6 +4,8 @@ from config import TOKEN, MODEL_NAME
 from utils.file_utils import save_file, cleanup_file
 from services.whisper_service import recognize_voice
 
+from services.obsidian_service import write_note, read_note
+
 # Создаем экземпляр телебота
 bot = telebot.TeleBot(TOKEN)
 
@@ -18,6 +20,17 @@ def start_handler(message):
         "Просто отправьте мне голосовое сообщение!"
     )
 
+# Обработчик команды /read
+@bot.message_handler(commands=['read'])
+def read_note_handler(message):
+    content = read_note()
+    if content is None:
+        bot.reply_to(message, "❌ Файл не найден! Проверь VAULT_PATH.")
+    else:
+        bot.reply_to(message, f"📄 Содержимое файла:\n\n{content}")
+
+
+
 # Обработчик голосовых сообщений
     # @bot.message_handler(content_types=['voice'])
     # def voice_handler(message):
@@ -26,7 +39,6 @@ def start_handler(message):
     #     text = recognize_voice(file_path, language="ru")
     #     bot.reply_to(message, f"📄 Распознанный текст:\n\n{text}")
     #     cleanup_file(file_path)
-
 @bot.message_handler(content_types=['voice'])
 def voice_handler(message):
     sent_msg = bot.send_message(message.chat.id, "Начинаю распознавание вашего голосового сообщения... ⏳") # Отправляем первое сообщение
@@ -38,6 +50,8 @@ def voice_handler(message):
         text=f"📄 Распознанный текст:\n\n{text}"
     )
     cleanup_file(file_path) # Убираем временный файл
+    write_note(text)
+
 
 
 print(f"✅ Бот успешно запущен с моделью {MODEL_NAME}!")
