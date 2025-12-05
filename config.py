@@ -7,5 +7,5 @@ load_dotenv()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")   # Телеграм токен
 MODEL_NAME = "medium"                     # Модель Whisper
 VOICE_FOLDER = "data"                     # Папка для временных файлов
-VAULT_PATH = Path("/home/ster/Telegram-bot/ObsidianVault/test.md")
+VAULT_PATH = Path("../ObsidianVault")
 

@@ -1,10 +1,10 @@
 import telebot
 
-from config import TOKEN, MODEL_NAME
+from config import TOKEN, MODEL_NAME, VAULT_PATH
 from utils.file_utils import save_file, cleanup_file
 from services.whisper_service import recognize_voice
 
-from services.obsidian_service import write_note, read_note
+from services.obsidian_service import push_to_github
 
 # Создаем экземпляр телебота
 bot = telebot.TeleBot(TOKEN)
@@ -21,13 +21,13 @@ def start_handler(message):
     )
 
 # Обработчик команды /read
-@bot.message_handler(commands=['read'])
-def read_note_handler(message):
-    content = read_note()
-    if content is None:
-        bot.reply_to(message, "❌ Файл не найден! Проверь VAULT_PATH.")
-    else:
-        bot.reply_to(message, f"📄 Содержимое файла:\n\n{content}")
+# @bot.message_handler(commands=['read'])
+# def read_note_handler(message):
+#     content = read_note()
+#     if content is None:
+#         bot.reply_to(message, "❌ Файл не найден! Проверь VAULT_PATH.")
+#     else:
+#         bot.reply_to(message, f"📄 Содержимое файла:\n\n{content}")
 
 
 
@@ -44,13 +44,29 @@ def voice_handler(message):
     sent_msg = bot.send_message(message.chat.id, "Начинаю распознавание вашего голосового сообщения... ⏳") # Отправляем первое сообщение
     file_path = save_file(bot, message.voice.file_id) # Сохраняем голосовой файл
     text = recognize_voice(file_path, language="ru")  # Распознаём текст
-    bot.edit_message_text(                            # Изменяем текст отправленного сообщения
-        chat_id=sent_msg.chat.id,
-        message_id=sent_msg.message_id,
-        text=f"📄 Распознанный текст:\n\n{text}"
-    )
-    cleanup_file(file_path) # Убираем временный файл
-    write_note(text)
+    # bot.edit_message_text(                            # Изменяем текст отправленного сообщения
+    #     chat_id=sent_msg.chat.id,
+    #     message_id=sent_msg.message_id,
+    #     text=f"📄 Распознанный текст:\n\n{text}"
+    # )
+    # cleanup_file(file_path) # Убираем временный файл
+    # write_note(text)
+
+    # Сохраняем текст в Obsidian
+    note_file = VAULT_PATH / "TelegramVoiceNote.md"
+    with open(note_file, "a", encoding="utf-8") as f:
+        f.write(text + "\n\n")
+    
+    cleanup_file(file_path)
+    
+    # Пушим изменения на GitHub
+    if push_to_github():
+        bot.edit_message_text(chat_id=sent_msg.chat.id, message_id=sent_msg.message_id,
+                              text=f"📄 Текст распознан и добавлен в Obsidian!\n\n{text}\n\n✅ Изменения отправлены на GitHub")
+    else:
+        bot.edit_message_text(chat_id=sent_msg.chat.id, message_id=sent_msg.message_id,
+                              text=f"📄 Текст распознан:\n\n{text}\n\n⚠️ Ошибка при отправке на GitHub")
+
 
 
 
